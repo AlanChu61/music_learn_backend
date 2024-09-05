@@ -1,5 +1,8 @@
 from sqlalchemy.orm import Session
 from . import models
+from fastapi import Depends, HTTPException
+from .models import User
+from .database import get_db
 
 
 def create_dummy_data(db: Session):
@@ -13,28 +16,28 @@ def create_dummy_data(db: Session):
     teacher = models.User(
         name="John Doe",
         email="teacher@example.com",
-        password_hash="hashedpassword",
+        password="hashedpassword",
         role="teacher",
         instrument="Piano",
     )
     teacher01 = models.User(
         name="teacher01",
         email="teacher01@example.com",
-        password_hash="123",
+        password="123",
         role="teacher",
         instrument="Violin",
     )
     student = models.User(
         name="Jane Smith",
         email="student@example.com",
-        password_hash="hashedpassword",
+        password="hashedpassword",
         role="student",
         instrument="Guitar",
     )
     student01 = models.User(
         name="student01",
         email="student01@example.com",
-        password_hash="123",
+        password="123",
         role="student",
         instrument="Drums",
     )
@@ -95,10 +98,8 @@ from fastapi import Depends, HTTPException
 from . import models, database
 
 
-def get_current_user(db: Session = Depends(database.get_db)):
-    # 通过用户的认证信息（如 email 或 token）获取当前用户
-    current_user_email = "current_user_email"  # 你需要替换为实际的逻辑
-    user = db.query(models.User).filter(models.User.email == current_user_email).first()
+def get_current_user(email: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user

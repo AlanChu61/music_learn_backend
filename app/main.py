@@ -1,5 +1,6 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
+from app.routers import users, courses, submissions, refresh_database
 
 app = FastAPI()
 
@@ -11,6 +12,10 @@ app.add_middleware(
     allow_methods=["*"],  # 允許所有 HTTP 方法
     allow_headers=["*"],  # 允許所有 HTTP 標頭
 )
+app.include_router(users.router)
+# app.include_router(courses.router)
+app.include_router(submissions.router)
+app.include_router(refresh_database.router)
 
 
 # WebSocket 连接
