@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
@@ -14,7 +13,7 @@ router = APIRouter()
 class SubmissionResponse(BaseModel):
     id: int
     file_url: str
-    uploaded_at: datetime  # Use datetime instead of string
+    uploaded_at: str  # Store as string to avoid validation issues
     user_id: int  # ID of the user who made the submission
 
     class Config:
@@ -32,17 +31,23 @@ class CourseResponse(BaseModel):
         orm_mode = True
 
 
-# Fetch the courses for the current teacher along with submissions
+# Fetch the courses for the current user (teacher or student)
 @router.get("/courses", response_model=List[CourseResponse])
-def get_teacher_courses(
+def get_courses(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    if current_user.role != "teacher":
-        raise HTTPException(
-            status_code=403, detail="Access forbidden: You are not a teacher"
-        )
+    # Fetch courses based on user role (teacher or student)
+    if current_user.role == "teacher":
+        courses = db.query(Course).filter(Course.teacher_id == current_user.id).all()
+    elif current_user.role == "student":
+        courses = db.query(Course).filter(Course.student_id == current_user.id).all()
+    else:
+        raise HTTPException(status_code=403, detail="Access forbidden: Invalid role")
 
-    courses = db.query(Course).filter(Course.teacher_id == current_user.id).all()
+    # Convert datetime to ISO 8601 format for all submissions
+    for course in courses:
+        for submission in course.submissions:
+            submission.uploaded_at = submission.uploaded_at.isoformat()
 
     return courses
 
@@ -54,9 +59,14 @@ def get_course_with_submissions(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Fetch a specific course for teacher or student
     course = (
         db.query(Course)
-        .filter(Course.id == course_id, Course.teacher_id == current_user.id)
+        .filter(
+            Course.id == course_id,
+            (Course.teacher_id == current_user.id)
+            | (Course.student_id == current_user.id),
+        )
         .first()
     )
 
@@ -64,5 +74,9 @@ def get_course_with_submissions(
         raise HTTPException(
             status_code=404, detail="Course not found or you don't have access to it"
         )
+
+    # Convert datetime to ISO 8601 format for all submissions
+    for submission in course.submissions:
+        submission.uploaded_at = submission.uploaded_at.isoformat()
 
     return course

@@ -26,6 +26,7 @@ class Token(BaseModel):
 
 
 # 創建 JWT Token
+# Modify Token Creation to Include Role
 def create_access_token(data: dict, expires_delta: timedelta = None):
     to_encode = data.copy()
     if expires_delta:
@@ -37,21 +38,18 @@ def create_access_token(data: dict, expires_delta: timedelta = None):
     return encoded_jwt
 
 
-# 登入並生成 Token
 @router.post("/login", response_model=Token)
 def login(request: LoginRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == request.email).first()
     if not user:
         raise HTTPException(status_code=400, detail="Email not found")
-    if request.password != user.password:  # 直接比較明文密碼
+    if request.password != user.password:
         raise HTTPException(status_code=400, detail="Incorrect password")
 
-    # 成功登入後，生成 Token
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = create_access_token(
-        data={"sub": user.email}, expires_delta=access_token_expires
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
     )
-
     return {"access_token": access_token, "token_type": "bearer"}
 
 
