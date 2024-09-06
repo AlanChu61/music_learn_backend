@@ -13,7 +13,7 @@ app.add_middleware(
     allow_headers=["*"],  # 允許所有 HTTP 標頭
 )
 app.include_router(users.router)
-# app.include_router(courses.router)
+app.include_router(courses.router)
 app.include_router(submissions.router)
 app.include_router(refresh_database.router)
 
